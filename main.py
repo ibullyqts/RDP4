@@ -1,205 +1,135 @@
-import os
-import time
-import re
-import random
-import datetime
-import threading
-import sys
-import gc
-import tempfile
-import subprocess
-import shutil
-from concurrent.futures import ThreadPoolExecutor
-
-# 📦 STANDARD SELENIUM + STEALTH
+# -*- coding: utf-8 -*-
+import os, time, re, random, threading, gc, sys
 from selenium import webdriver
-from selenium_stealth import stealth
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium_stealth import stealth
 
-# --- V100 SINGLE AGENT CONFIGURATION ---
-THREADS = 2             # ✅ double Agent
-TOTAL_DURATION = 25000  # 7 Hours
-
-# ⚡ HYPER SPEED
-BURST_SPEED = (0.1, 0.3) 
-
-# ♻️ RESTART CYCLES (2 Minutes)
-# ⚠️ 120 Seconds = 2 Minutes
-SESSION_MIN_SEC = 120   
+# --- ⚙️ V100 TUNED SETTINGS (STABLE) ---
+THREADS = 2             
+TABS_PER_THREAD = 2     
+PULSE_DELAY = 100       
 SESSION_MAX_SEC = 120   
+TOTAL_DURATION = 25000  
 
-GLOBAL_SENT = 0
-COUNTER_LOCK = threading.Lock()
-BROWSER_LAUNCH_LOCK = threading.Lock()
-
-# Force UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
 
-def log_status(agent_id, msg):
-    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-    print(f"[{timestamp}] Agent {agent_id}: {msg}", flush=True)
+def get_driver():
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--blink-settings=imagesEnabled=false")
+    options.page_load_strategy = 'eager'
+    options.add_experimental_option("mobileEmulation", {"deviceName": "iPad Pro"})
+    
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=options)
+    
+    stealth(driver, languages=["en-US"], vendor="Google Inc.", platform="Linux armv8l", fix_hairline=True)
+    return driver
 
-def get_driver(agent_id):
-    with BROWSER_LAUNCH_LOCK:
-        time.sleep(2) 
-        chrome_options = Options()
-        
-        # 🐧 LINUX OPTIMIZATIONS
-        chrome_options.add_argument("--headless=new") 
-        chrome_options.add_argument("--no-sandbox") 
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--renderer-process-limit=2")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-notifications")
-        
-        # MOBILE EMULATION (iPhone X Mode)
-        mobile_emulation = {
-            "deviceMetrics": { "width": 375, "height": 812, "pixelRatio": 3.0 },
-            "userAgent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
-        }
-        chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
-        
-        temp_dir = os.path.join(tempfile.gettempdir(), f"linux_v100_single_{int(time.time())}")
-        chrome_options.add_argument(f"--user-data-dir={temp_dir}")
-
-        driver = webdriver.Chrome(options=chrome_options)
-
-        # 🪄 APPLY STEALTH
-        stealth(driver,
-            languages=["en-US", "en"],
-            vendor="Google Inc.",
-            platform="Linux armv8l", 
-            webgl_vendor="ARM",
-            renderer="Mali-G76",
-            fix_hairline=True,
-        )
-        
-        driver.custom_temp_path = temp_dir
-        return driver
-
-def find_mobile_box(driver):
-    selectors = ["//textarea", "//div[@role='textbox']"]
-    for xpath in selectors:
-        try: 
-            el = driver.find_element(By.XPATH, xpath)
-            return el
-        except: continue
-    return None
-
-def adaptive_inject(driver, element, text):
-    try:
-        driver.execute_script("arguments[0].click();", element)
-        driver.execute_script("""
-            var el = arguments[0];
-            document.execCommand('insertText', false, arguments[1]);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-        """, element, text)
-        
-        try:
-            btn = driver.find_element(By.XPATH, "//div[contains(text(), 'Send')] | //button[text()='Send']")
-            driver.execute_script("arguments[0].click();", btn)
-        except:
-            element.send_keys(Keys.ENTER)
-        return True
-    except:
-        return False
-
-def extract_session_id(raw_cookie):
-    match = re.search(r'sessionid=([^;]+)', raw_cookie)
-    return match.group(1).strip() if match else raw_cookie.strip()
-
-def run_life_cycle(agent_id, cookie, target, messages):
+def run_agent(agent_id, cookie, target_id, target_name):
     global_start = time.time()
-
+    
     while (time.time() - global_start) < TOTAL_DURATION:
         driver = None
-        temp_path = None
-        
-        # ⚠️ FIXED 2 MINUTE SESSION
-        current_session_limit = 120 
-        session_start = time.time()
-        
         try:
-            log_status(agent_id, "[START] Launching Browser...")
-            driver = get_driver(agent_id)
-            temp_path = getattr(driver, 'custom_temp_path', None)
-            
-            driver.get("https://www.google.com")
+            print(f"🚀 [Agent {agent_id}] Starting 2-Min Cycle...")
+            driver = get_driver()
             driver.get("https://www.instagram.com/")
-            time.sleep(2) 
-
-            clean_session = extract_session_id(cookie)
-            driver.add_cookie({'name': 'sessionid', 'value': clean_session, 'path': '/', 'domain': '.instagram.com'})
-            driver.refresh()
-            time.sleep(random.uniform(3, 5)) 
             
-            driver.get(f"https://www.instagram.com/direct/t/{target}/")
-            time.sleep(4) # Reduced wait slightly for speed
+            sid = re.search(r'sessionid=([^;]+)', cookie).group(1) if 'sessionid=' in cookie else cookie
+            driver.add_cookie({'name': 'sessionid', 'value': sid.strip(), 'domain': '.instagram.com'})
             
-            log_status(agent_id, "📢 Sending Activation Ping...")
-            try:
-                box = find_mobile_box(driver)
-                if box: adaptive_inject(driver, box, "Bot Active! 🚀 ")
-            except: pass
+            for _ in range(TABS_PER_THREAD):
+                driver.execute_script(f"window.open('https://www.instagram.com/direct/t/{target_id}/', '_blank');")
+                time.sleep(2)
 
-            log_status(agent_id, "[SUCCESS] Connected.")
-            msg_box = find_mobile_box(driver)
+            handles = driver.window_handles[1:]
+            for handle in handles:
+                driver.switch_to.window(handle)
+                # ⚡ HYPER-ENGINE WITH UPDATED BRANDING & DYNAMIC EMOJIS
+                driver.execute_script("""
+                    const name = arguments[0];
+                    const delay = arguments[1];
+                    
+                    function getBlock(n) {
+                        // Emoji pool for the switching sequence
+                        const emojis = ["⚡", "🔥", "💥", "👑", "🌹", "🔱", "💀", "🩸", "🔴", "❌"];
+                        const emo = emojis[Math.floor(Math.random() * emojis.length)];
+                        
+                        return `🔱👑 ${n} 🌹 P R V R पापा से CUD 👑🔱\\n` +
+                               `▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\\n` +
+                               `  ◢◤ ──────────────────── ◢◤\\n` +
+                               `     ${emo}\\n` +
+                               `       ${emo}\\n` +
+                               `         ${emo}\\n` +
+                               `     ${emo}\\n` +
+                               `       ${emo}\\n` +
+                               `         ${emo}\\n` +
+                               `     ${emo}\\n` +
+                               `       ${emo}\\n` +
+                               `         ${emo}\\n` +
+                               `     ${emo}\\n` +
+                               `       ${emo}\\n` +
+                               `         ${emo}\\n` +
+                               `     ${emo}\\n` +
+                               `       ${emo}\\n` +
+                               `         ${emo}\\n` +
+                               `  ◢◤ ──────────────────── ◢◤\\n` +
+                               `▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\\n` +
+                               `🔱👑 ${n} 🌹 P R V R पापा से CUD 👑🔱`;
+                    }
 
-            while (time.time() - session_start) < current_session_limit:
-                if (time.time() - global_start) > TOTAL_DURATION: break
+                    setInterval(() => {
+                        const box = document.querySelector('div[role="textbox"], [contenteditable="true"]');
+                        if (box) {
+                            const text = getBlock(name);
+                            box.focus();
+                            document.execCommand('insertText', false, text);
+                            box.dispatchEvent(new Event('input', { bubbles: true }));
 
-                if not msg_box:
-                    msg_box = find_mobile_box(driver)
-                    if not msg_box:
-                        time.sleep(1)
-                        continue
+                            const enter = new KeyboardEvent('keydown', {
+                                bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13
+                            });
+                            box.dispatchEvent(enter);
+                            
+                            setTimeout(() => { if(box.innerHTML.length > 0) box.innerHTML = ""; }, 5);
+                        }
+                    }, delay);
+                """, target_name, PULSE_DELAY)
 
-                msg = random.choice(messages)
-                if adaptive_inject(driver, msg_box, f"{msg} "):
-                    with COUNTER_LOCK:
-                        global GLOBAL_SENT
-                        GLOBAL_SENT += 1
-                    log_status(agent_id, "[SENT] Message delivered")
-                
-                wait_time = random.uniform(*BURST_SPEED)
-                time.sleep(wait_time)
+            print(f"🔥 [Agent {agent_id}] Bursting PRVR DADDY... (Reset in 120s)")
+            time.sleep(SESSION_MAX_SEC) 
 
         except Exception as e:
-            err_msg = str(e).encode('ascii', 'ignore').decode('ascii')
-            log_status(agent_id, f"[ERROR] Glitch: {err_msg[:50]}...")
-        
+            print(f"⚠️ [Agent {agent_id}] Cycle Error: {e}")
         finally:
-            log_status(agent_id, "[CLEAN] ♻️ 2 Minute Restart...")
-            if driver: 
-                try: driver.quit()
-                except: pass
-            
-            if temp_path and os.path.exists(temp_path):
-                try: shutil.rmtree(temp_path, ignore_errors=True)
-                except: pass
-            
+            if driver: driver.quit()
             gc.collect() 
-            time.sleep(3) 
+            time.sleep(2)
 
 def main():
-    cookie = os.environ.get("INSTA_COOKIE", "").strip()
-    target = os.environ.get("TARGET_THREAD_ID", "").strip()
-    messages = os.environ.get("MESSAGES", "Hello").split("|")
-    
-    if len(cookie) < 5:
-        sys.exit(1)
+    cookie = os.environ.get("INSTA_COOKIE")
+    target_id = os.environ.get("TARGET_THREAD_ID")
+    target_name = os.environ.get("TARGET_NAME", "TARGET")
 
-    try: subprocess.run("pkill -f chrome", shell=True)
-    except: pass
+    if not cookie or not target_id:
+        print("❌ Missing Secrets!")
+        return
 
-    with ThreadPoolExecutor(max_workers=THREADS) as executor:
-        for i in range(THREADS):
-            executor.submit(run_life_cycle, i+1, cookie, target, messages)
+    threads = []
+    for i in range(THREADS):
+        t = threading.Thread(target=run_agent, args=(i+1, cookie, target_id, target_name))
+        t.start()
+        threads.append(t)
+        time.sleep(10)
+
+    for t in threads:
+        t.join()
 
 if __name__ == "__main__":
     main()
