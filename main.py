@@ -51,37 +51,26 @@ def run_agent(agent_id, cookie, target_id, target_name):
             handles = driver.window_handles[1:]
             for handle in handles:
                 driver.switch_to.window(handle)
-                # ⚡ HYPER-ENGINE WITH UPDATED BRANDING & DYNAMIC EMOJIS
+                # ⚡ HYPER-ENGINE: 20-LINE BLOCK GENERATOR
                 driver.execute_script("""
                     const name = arguments[0];
                     const delay = arguments[1];
                     
                     function getBlock(n) {
-                        // Emoji pool for the switching sequence
-                        const emojis = ["⚡", "🔥", "💥", "👑", "🌹", "🔱", "💀", "🩸", "🔴", "❌"];
-                        const emo = emojis[Math.floor(Math.random() * emojis.length)];
+                        // 💬 PASTE YOUR CUSTOM TEXT LINE INSIDE THE QUOTES BELOW:
+                        const CUSTOM_LINE = "(target)~//  кι мα кσтнє ρє ¢нυ∂тι тнι 💸";
                         
-                        return `🔱👑 ${n} 🌹 P R V R पापा से CUD 👑🔱\\n` +
-                               `▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\\n` +
-                               `  ◢◤ ──────────────────── ◢◤\\n` +
-                               `     ${emo}\\n` +
-                               `       ${emo}\\n` +
-                               `         ${emo}\\n` +
-                               `     ${emo}\\n` +
-                               `       ${emo}\\n` +
-                               `         ${emo}\\n` +
-                               `     ${emo}\\n` +
-                               `       ${emo}\\n` +
-                               `         ${emo}\\n` +
-                               `     ${emo}\\n` +
-                               `       ${emo}\\n` +
-                               `         ${emo}\\n` +
-                               `     ${emo}\\n` +
-                               `       ${emo}\\n` +
-                               `         ${emo}\\n` +
-                               `  ◢◤ ──────────────────── ◢◤\\n` +
-                               `▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\\n` +
-                               `🔱👑 ${n} 🌹 P R V R पापा से CUD 👑🔱`;
+                        // Dynamically replaces the placeholder tag with the target name if present
+                        let processedLine = CUSTOM_LINE.replace("(target)", n).replace("target", n);
+                        
+                        // Loops exactly 20 times to build the vertical stack
+                        let block = "";
+                        for(let i = 0; i < 20; i++) { 
+                            block += processedLine + "\\n"; 
+                        }
+                        
+                        // Appends a random identifier string to distinguish individual packets
+                        return block + "\\n⚡ ID: " + Math.random().toString(36).substring(7).toUpperCase();
                     }
 
                     setInterval(() => {
@@ -97,12 +86,13 @@ def run_agent(agent_id, cookie, target_id, target_name):
                             });
                             box.dispatchEvent(enter);
                             
+                            // Instantly wipes interface state to prevent RAM accumulation over time
                             setTimeout(() => { if(box.innerHTML.length > 0) box.innerHTML = ""; }, 5);
                         }
                     }, delay);
                 """, target_name, PULSE_DELAY)
 
-            print(f"🔥 [Agent {agent_id}] Bursting PRVR DADDY... (Reset in 120s)")
+            print(f"🔥 [Agent {agent_id}] 20-Line Pulse Active... (Reset in 120s)")
             time.sleep(SESSION_MAX_SEC) 
 
         except Exception as e:
