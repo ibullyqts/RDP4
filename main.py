@@ -58,7 +58,7 @@ def run_agent(agent_id, cookie, target_id, target_name):
                     
                     function getBlock(n) {
                         // 💬 PASTE YOUR CUSTOM TEXT LINE INSIDE THE QUOTES BELOW:
-                        const CUSTOM_LINE = "(target)𝐃ʜᴛᴛ 𝐑9ᴅɪ 𝐊ᴇ 𝐁ᴀᴄᴄᴄʜᴇ 𝐀ᴜᴋᴀᴛᴛ 𝐁ᴀɴᴀ🌙";
+                        const CUSTOM_LINE = "(target)𝚂ᴀ𝚈 【﻿ＰＲＶＲ】 𝐃ᴀᴅᴅ𝐘 ~⭕";
                         
                         // Dynamically replaces the placeholder tag with the target name if present
                         let processedLine = CUSTOM_LINE.replace("(target)", n).replace("target", n);
